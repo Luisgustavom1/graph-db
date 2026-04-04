@@ -1,3 +1,4 @@
+import { Query } from "../query";
 import { Edge, EdgeInput, GraphState, Node, NodeInput, Error } from "./contracts";
 
 const DEFAULT_ERROR: Error = (msg: string) => {
@@ -70,5 +71,12 @@ export class Graph implements GraphState {
     if (!id) return undefined;
     if (typeof id === 'number') return this._vertexIndex[id];
     return this._vertexIndex[id._id]
+  }
+
+  nodeQuery() {
+    const q = Query.query(this);
+    // não entendi esse porra voltar pra entender
+    q.add("NODE", [].slice.call(arguments));
+    return q;
   }
 }
