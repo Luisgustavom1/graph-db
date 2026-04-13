@@ -1,4 +1,4 @@
-import { PipeType, PipeTypeName, Query } from "../query";
+import { Query } from "../query";
 import { Edge, EdgeInput, Node, NodeInput, Error, NodeData } from "./contracts";
 
 const DEFAULT_ERROR: Error = (msg: string) => {
@@ -6,18 +6,12 @@ const DEFAULT_ERROR: Error = (msg: string) => {
   return false;
 }
 
-const FAUX_PIPETYPE: PipeType = function(_a, _b, maybe_gremlin) {
-  return maybe_gremlin || "pull";
-}
-
 export class Graph {
   private _nodes: Node[];
   private _edges: Edge[];
   private _vertexIndex: Record<number, Node>;
   private _autoIncId: number;
-  private _pipetypes: Record<string, PipeType> = {};
-  private _queries: Record<string, Function> = {};
-  private readonly error: Error = DEFAULT_ERROR;
+  readonly error: Error = DEFAULT_ERROR;
 
   private constructor(error?: Error) {
     this._nodes = [];
@@ -100,10 +94,8 @@ export class Graph {
     return this._vertexIndex[id._id]
   }
 
-  node() {
+  query() {
     const q = Query.query(this);
-    // TODO: não entendi esse porra voltar pra entender
-    q.add("NODE", [].slice.call(arguments));
     return q;
   }
 
@@ -136,21 +128,5 @@ export class Graph {
 
   findInEdges(node: Node) {
     return node._in || [];
-  }
-
-  // TODO: não sei se isso aqui deveria estar na classe do grafo
-  addPipetype(name: PipeTypeName, pipetype: PipeType) {
-    this._pipetypes[name] = pipetype;
-    this._queries[name] = function() {
-      return this.add(name, [].slice.apply(arguments))
-    };
-  }
-
-  getPipetype(name: PipeTypeName) {
-    const pipetype = this._pipetypes[name];
-
-    if (!pipetype) this.error('unknown pipetype ' + name);
-
-    return pipetype || FAUX_PIPETYPE;
   }
 }

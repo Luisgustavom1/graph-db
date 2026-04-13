@@ -27,10 +27,9 @@ const g = db.graph(N, E)
 
 console.log(g)
 
-const q = g.node()
-console.log(q)
+const q = g.query()
 
-g.addPipetype("NODE", function(g: Graph, args: PipeArgs, gremlin: Gremlin, state: State) {
+q.addPipetype("NODE", function(g: Graph, args: PipeArgs, gremlin: Gremlin, state: State) {
   if (!state.nodes)
     state.nodes = g.findNodes(args);
 
@@ -40,7 +39,10 @@ g.addPipetype("NODE", function(g: Graph, args: PipeArgs, gremlin: Gremlin, state
   return Query.makeGremlin(node!, gremlin.state);
 })
 
-g.addPipetype("property", function(_g, args, gremlin, _state) {
+q.addPipetype('out', q.simpleTraversal('out'))
+q.addPipetype('in',  q.simpleTraversal('in'))
+
+q.addPipetype("property", function(_g, args, gremlin, _state) {
   if (!gremlin) return "pull";
   // args = [propertyName]
   const propertyName = args[0]
@@ -49,9 +51,13 @@ g.addPipetype("property", function(_g, args, gremlin, _state) {
   return gremlin.result === null ? false : gremlin
 })
 
-g.addPipetype("unique", function(_g, _args, gremlin, state) {
+q.addPipetype("unique", function(_g, _args, gremlin, state) {
   if (!gremlin) return "pull";
   if (state[gremlin.node._id]) return 'pull';
   state[gremlin.node._id] = true;
   return gremlin;
 })
+
+console.log(    
+  q.node(3).in().in().out().out().unique().run()
+)
