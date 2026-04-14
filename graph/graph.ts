@@ -96,6 +96,7 @@ export class Graph {
 
   query() {
     const q = Query.query(this);
+    q.add('node', [].slice.call(arguments));
     return q;
   }
 
@@ -122,11 +123,13 @@ export class Graph {
     return ids.map(id => this.findNodeById(id)).filter(Boolean) as Node[];
   }
 
-  findOutEdges(node: Node) {
-    return node._out || [];
+  findOutEdges(node: NodeInput) {
+    const maybeNode = this.findNodeById(node);
+    return maybeNode?._out || [];
   }
 
-  findInEdges(node: Node) {
-    return node._in || [];
+  findInEdges(node: NodeInput) {
+    const maybeNode = this.findNodeById(node);
+    return maybeNode?._in || [];
   }
 }

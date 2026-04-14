@@ -1,10 +1,11 @@
-import { Edge, Graph, Node, NodeData } from "./graph";
+import { Edge, Graph, Node, NodeData, NodeInput } from "./graph";
 
 export type PipeTypeName = "node" | "unique" | "property" | "in" | "out";
 export type PipeArgs = string[];
-export type PipeType = (graph: Graph, args: PipeArgs, gremlin: Gremlin, state: State) =>  Gremlin;
+export type PipeType = (graph: Graph, args: PipeArgs, gremlin: Gremlin, state: State) =>  FullGremlin;
 export type State = { nodes?: Node[]; edges?: Edge[]; gremlin?: Gremlin, [k: number]: boolean };
-export type Gremlin = { node: Node; state: State; result?: any; } | boolean | string;
+export type Gremlin = { node: NodeInput; state: State; result?: any; };
+export type FullGremlin = Gremlin | boolean | string;
 
 const FAUX_PIPETYPE: PipeType = function(_a, _b, maybe_gremlin) {
   return maybe_gremlin || "pull";
@@ -27,11 +28,11 @@ export class Query {
     return new Query(graph);
   }
 
-  static gotoNode(gremlin: Gremlin, node: Node) {
+  static gotoNode(gremlin: Gremlin, node: NodeInput) {
     return Query.makeGremlin(node, gremlin.state);
   }
 
-  static makeGremlin(node: Node, state: State = {}): Gremlin {
+  static makeGremlin(node: NodeInput, state: State = {}): Gremlin {
     return { node, state };
   }
 
@@ -40,12 +41,6 @@ export class Query {
       if (thing[k] !== filter[k]) return false;
     }
     return true;
-  }
-
-  node() {
-    // TODO: não entendi esse porra voltar pra entender
-    this.add("node", [].slice.call(arguments))
-    return this;
   }
 
   add(type: PipeTypeName, args: PipeArgs) {
@@ -73,17 +68,18 @@ export class Query {
       }
 
       if (!state.edges.length) return "pull";
-
+      
       const node = state.edges.pop()![edgeList];
+      if (!node) return "pull";
       // TODO: re-evaluate this cast
-      return Query.gotoNode(gremlin, node as Node);
+      return Query.gotoNode(gremlin as Gremlin, node);
     }
   }
 
   addPipetype(name: PipeTypeName, pipetype: PipeType) {
     this._pipetypes[name] = pipetype;
     this[name] = function() {
-      return this.add(name, [].slice.apply(arguments))
+      return this.add(name, [].slice.call(arguments));
     };
   }
 
@@ -97,7 +93,7 @@ export class Query {
 
   run() {
     const max = this.program.length - 1;
-    let maybe_gremlin: Gremlin = false;
+    let maybe_gremlin: FullGremlin = false;
     let pc = max;
     const results = [];
     let done = -1;
@@ -138,9 +134,7 @@ export class Query {
     }
 
     return results.map(gremlin => 
-      gremlin.result !== null 
-        ? gremlin.result 
-        : gremlin.node
-      );
+      gremlin.result || gremlin.node
+    );
   }
 }

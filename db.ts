@@ -14,7 +14,7 @@ const db: db = {
     return graph;
   },
   error: function (msg: string) {
-    console.error("[dagoba] " + msg);
+    console.error("[lgdb] " + msg);
     return false;
   },
 }
@@ -25,11 +25,11 @@ const E: EdgeInput[] = [ [1,2], [1,3],  [2,4],  [2,5],  [3,6],  [3,7],  [4,8]
 
 const g = db.graph(N, E)
 
-console.log(g)
+console.log(JSON.stringify(g, null, 2))
 
-const q = g.query()
+const q = g.query(4)
 
-q.addPipetype("NODE", function(g: Graph, args: PipeArgs, gremlin: Gremlin, state: State) {
+q.addPipetype("node", function(g: Graph, args: PipeArgs, gremlin: Gremlin, state: State) {
   if (!state.nodes)
     state.nodes = g.findNodes(args);
 
@@ -53,11 +53,13 @@ q.addPipetype("property", function(_g, args, gremlin, _state) {
 
 q.addPipetype("unique", function(_g, _args, gremlin, state) {
   if (!gremlin) return "pull";
-  if (state[gremlin.node._id]) return 'pull';
-  state[gremlin.node._id] = true;
+  const nodeId = typeof gremlin.node === "number" ? gremlin.node : gremlin.node._id; 
+  if (state[nodeId]) return 'pull';
+  state[nodeId] = true;
   return gremlin;
 })
 
 console.log(    
-  q.node(3).in().in().out().out().unique().run()
+  // q.in().in().out().out().unique().run()
+  q.in().in().out().unique().run()
 )
