@@ -1,5 +1,5 @@
-import { Query } from "../query";
-import { Edge, EdgeInput, Node, NodeInput, Error, NodeData } from "./contracts";
+import { Query } from "../query.ts";
+import type { Edge, EdgeInput, Node, NodeInput, Error, NodeData } from "./contracts.ts";
 
 const DEFAULT_ERROR: Error = (msg: string) => {
   console.error(msg);

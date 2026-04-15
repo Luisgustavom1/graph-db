@@ -1,5 +1,5 @@
-import { EdgeInput, NodeInput } from "./graph/contracts";
-import { Graph } from "./graph";
+import type { EdgeInput, NodeInput } from "./graph/contracts.ts";
+import type { Graph } from "./graph/index.ts";
 
 export type LgDB = {
   version: string;
