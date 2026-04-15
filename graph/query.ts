@@ -1,4 +1,4 @@
-import type { Edge, Graph, Node, NodeData, NodeInput } from "./graph/index.ts";
+import type { Edge, Graph, Node, NodeData, NodeInput } from "./index.ts";
 
 export type PipeTypeName = "node" | "unique" | "property" | "in" | "out";
 export type PipeArgs = string[];

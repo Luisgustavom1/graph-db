@@ -1,4 +1,4 @@
-import { Query } from "../query.ts";
+import { Query } from "./query.ts";
 import type { Edge, EdgeInput, Node, NodeInput, Error, NodeData } from "./contracts.ts";
 
 const DEFAULT_ERROR: Error = (msg: string) => {

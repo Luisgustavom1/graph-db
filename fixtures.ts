@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { Graph } from "./graph/index.ts";
 import type { EdgeInput, NodeInput } from "./graph/contracts.ts";
-import { Query } from "./query.ts";
-import type { Gremlin, PipeArgs, State } from "./query.ts";
+import { Query } from "./graph/query.ts";
+import type { Gremlin, PipeArgs, State } from "./graph/query.ts";
 import type { LgDB as DbType } from "./type.ts";
 
 const db: DbType = {
