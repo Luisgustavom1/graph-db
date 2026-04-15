@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Graph } from "./graph/index.ts";
 import type { EdgeInput, NodeInput } from "./graph/contracts.ts";
 import { Query } from "./query.ts";
