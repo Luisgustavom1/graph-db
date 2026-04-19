@@ -91,21 +91,21 @@ export class Query {
     return pipetype || FAUX_PIPETYPE;
   }
 
-  addAlias(newName: string, newProgram: Program[]) {
+  addAlias(alias: string, newProgram: Program[]) {
     const parsedProgram = newProgram.map(step => {
       return [step[0], step.slice(1)] as Program;
     })
     
     this._transformers.addTransformer((program) => {
       return program.reduce((acc, step) => {
-        if (step[0] === newName) acc.push(...parsedProgram)
+        if (step[0] === alias) acc.push(...parsedProgram)
         else acc.push(step);
         
         return acc;
       }, [] as Program[])
     }, 100)
 
-    this.addPipetype(newName, function() {});
+    this.addPipetype(alias, function() {});
   }
 
   extend(args: PipeArgs, defaults: string[]) {
