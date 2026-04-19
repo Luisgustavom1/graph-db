@@ -89,3 +89,5 @@ for (const testCase of testCases) {
     assert.deepStrictEqual(testCase.actual(), testCase.expected);
   });
 }
+
+console.log(g.jsonify());

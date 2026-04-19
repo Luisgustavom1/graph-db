@@ -132,4 +132,16 @@ export class Graph {
     const maybeNode = this.findNodeById(node);
     return maybeNode?._in || [];
   }
+
+  jsonify() {
+    const cleanNode = (_key: string, value: Node) => {
+      return value._id ? value._id : value;
+    }
+
+    const cleanEdge = (_key: string, value: Edge) => {
+      return value._label ? value._label : value;
+    }
+
+    return '{"Nodes": ' + JSON.stringify(this._nodes, cleanNode) + ', "Edges": ' + JSON.stringify(this._edges, cleanEdge) + '}';
+  }
 }
