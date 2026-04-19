@@ -43,7 +43,7 @@ export function createSampleGraph() {
   return db.graph(N, E);
 }
 
-export function registerDefaultPipes(q: Query) {
+function registerDefaultPipes(q: Query) {
   q.addPipetype("node", function(g: Graph, args: PipeArgs, gremlin: Gremlin, state: State) {
     if (!state.nodes)
       state.nodes = g.findNodes(args);
@@ -75,8 +75,29 @@ export function registerDefaultPipes(q: Query) {
   })
 }
 
+function registerAlias(q: Query) {
+  q.addAlias("children", [["in"]])
+  q.addAlias("parents", [["out"]])
+
+  q.addAlias('grandparents', [['out', 'parent'], ['out', 'parent']])
+
+  // TODO: descomentar e testar
+//   Dagoba.addAlias('siblings',     [ ['as', 'me'], ['out', 'parent']
+//                                 , ['in', 'parent'], ['except', 'me']])
+// Dagoba.addAlias('cousins',      [ ['out', 'parent'], ['as', 'folks']
+//                                 , ['out', 'parent'], ['in', 'parent']
+//                                 , ['except', 'folks'], ['in', 'parent']
+//                                 , ['unique']])
+// testar mas isso aqui não vai funcionar
+// Dagoba.addAlias('cousins',      [ 'parents', ['as', 'folks']
+//                                 , 'parents', 'children'
+//                                 , ['except', 'folks'], 'children', 'unique'])
+}
+
 export function createQuery(g: Graph, startNodeId: number) {
   const q = g.query(startNodeId);
   registerDefaultPipes(q);
+  registerAlias(q);
+
   return q;
 }

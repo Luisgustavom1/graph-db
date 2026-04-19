@@ -61,6 +61,27 @@ const testCases: TestCase[] = [
     actual: () => createQuery(g, 4).out().run(),
     expected: [9, 8],
   },
+  // === ALIAS ===
+  {
+    name: "parents()",
+    actual: () => createQuery(g, 4).parents().run(),
+    expected: [9, 8],
+  },
+  {
+    name: "children()",
+    actual: () => createQuery(g, 4).children().run(),
+    expected: [2],
+  },
+  {
+    name: "children().children().parents()",
+    actual: () => createQuery(g, 4).children().children().parents().run(),
+    expected: [3, 2],
+  },
+  {
+    name: "children().in().parents().out().parents()",
+    actual: () => createQuery(g, 4).children().in().parents().out().parents().run(),
+    expected: [15, 14, 13, 12, 11, 10, 9, 8],
+  },
 ];
 
 for (const testCase of testCases) {

@@ -1,25 +1,25 @@
 import type { Edge, Graph, Node, NodeData, NodeInput } from "./index.ts";
+import { Transformers } from "./tranformers.ts";
 
-export type PipeTypeName = "node" | "unique" | "property" | "in" | "out";
+export type PipeTypeName = "node" | "unique" | "property" | "in" | "out" | string;
 export type PipeArgs = string[];
 export type PipeType = (graph: Graph, args: PipeArgs, gremlin: Gremlin, state: State) =>  FullGremlin;
 export type State = { nodes?: Node[]; edges?: Edge[]; gremlin?: Gremlin, [k: number]: boolean };
 export type Gremlin = { node: NodeInput; state: State; result?: any; };
 export type FullGremlin = Gremlin | boolean | string;
+export type Program = [PipeTypeName, PipeArgs];
 
 const FAUX_PIPETYPE: PipeType = function(_a, _b, maybe_gremlin) {
   return maybe_gremlin || "pull";
 }
 
 export class Query {
-  private program: [PipeTypeName, PipeArgs][] = [];
+  private program: Program[] = [];
   private _graph: Graph;
   private state: State[] = [];
   private _pipetypes: Record<string, PipeType> = {};
+  private _transformers: Transformers = new Transformers();
   
-  // private state: State[] = [];
-  // private gremlins: Gremlin[] = [];
-
   private constructor(graph: Graph) {
     this._graph = graph;
   }
@@ -91,7 +91,35 @@ export class Query {
     return pipetype || FAUX_PIPETYPE;
   }
 
+  addAlias(newName: string, newProgram: Program[]) {
+    const parsedProgram = newProgram.map(step => {
+      return [step[0], step.slice(1)] as Program;
+    })
+    
+    this._transformers.addTransformer((program) => {
+      return program.reduce((acc, step) => {
+        if (step[0] === newName) acc.push(...parsedProgram)
+        else acc.push(step);
+        
+        return acc;
+      }, [] as Program[])
+    }, 100)
+
+    this.addPipetype(newName, function() {});
+  }
+
+  extend(args: PipeArgs, defaults: string[]) {
+    return Object.keys(defaults).reduce((acc, key) => {
+      const index = parseInt(key);
+      if (args[index] !== undefined) return acc;
+      acc[index] = defaults[index];
+      return acc;
+    }, args);
+  }
+
   run() {
+    this.program = this._transformers.transform(this.program);
+
     const max = this.program.length - 1;
     let maybe_gremlin: FullGremlin = false;
     let pc = max;
