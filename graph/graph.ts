@@ -26,6 +26,14 @@ export class Graph {
     return new Graph(error);
   }
 
+  static fromString(str: string) {
+    const obj = JSON.parse(str) as { Nodes: Node[], Edges: Edge[] };
+    const g = new Graph();
+    g.populate(obj.Nodes, obj.Edges);
+
+    return g;
+  }
+
   filterEdges(edges: Edge[], filter: string[] | string) {
     return edges.filter((edge: Edge) => {
       if (!filter) return true;
@@ -47,6 +55,11 @@ export class Graph {
     return this._nodes;
   }
 
+  populate(n: NodeInput[], e: EdgeInput[]) {
+    if (Array.isArray(n)) this.addNodes(n);
+    if (Array.isArray(e)) this.addEdges(e);
+  }
+
   addNodes(ns: NodeInput[]) {
     for (const n of ns) {
       this.addNode(n);
@@ -58,6 +71,7 @@ export class Graph {
       this.addEdge(e);
     }
   }
+  
 
   addNode(v: NodeInput) {
     const node = typeof v === 'number' ? { _id: v } : v;
@@ -143,5 +157,9 @@ export class Graph {
     }
 
     return '{"Nodes": ' + JSON.stringify(this._nodes, cleanNode) + ', "Edges": ' + JSON.stringify(this._edges, cleanEdge) + '}';
+  }
+
+  toString() {
+    return this.jsonify()
   }
 }

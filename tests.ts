@@ -1,6 +1,7 @@
 import { createQuery, createSampleGraph } from "./fixtures.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
+import { Graph } from "./graph/graph.ts";
 
 type TestCase = {
   name: string;
@@ -90,4 +91,14 @@ for (const testCase of testCases) {
   });
 }
 
-console.log(g.jsonify());
+test("fromString", async () => {
+  const fromString = Graph.fromString(g.toString())
+
+  await test("::nodes", () => {
+    assert.deepStrictEqual(g.nodes, fromString.nodes)
+  })
+
+  await test("::edges", () => {
+    assert.deepStrictEqual(g.edges, fromString.edges)
+  })
+})

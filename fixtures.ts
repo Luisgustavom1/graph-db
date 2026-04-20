@@ -10,8 +10,7 @@ const db: DbType = {
   graph: function (n: NodeInput[], e: EdgeInput[]) {
     const graph = Graph.create(this.error);
 
-    if (Array.isArray(n)) graph.addNodes(n);
-    if (Array.isArray(e)) graph.addEdges(e);
+    graph.populate(n, e)
 
     return graph;
   },
