@@ -1,13 +1,15 @@
 export type Error = (msg: string) => boolean
 
-export type NodeInput = number | Node;
+export type NodeInput = NodeId | Node;
 
 export type Node = { 
-  _id: number;
+  _id: NodeId;
   _out?: Edge[];
   _in?: Edge[];
   [key: string]: unknown;
 };
+
+export type NodeId = number | string;
 
 export type NodeData = Record<string, unknown>;
 

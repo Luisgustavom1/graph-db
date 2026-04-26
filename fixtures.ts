@@ -1,8 +1,6 @@
-// @ts-nocheck
 import { Graph } from "./graph/index.ts";
 import type { EdgeInput, NodeInput } from "./graph/contracts.ts";
 import { Query } from "./graph/query.ts";
-import type { Gremlin, PipeArgs, State } from "./graph/query.ts";
 import type { LgDB as DbType } from "./type.ts";
 
 const db: DbType = {
@@ -42,61 +40,50 @@ export function createSampleGraph() {
   return db.graph(N, E);
 }
 
-function registerDefaultPipes(q: Query) {
-  q.addPipetype("node", function(g: Graph, args: PipeArgs, gremlin: Gremlin, state: State) {
-    if (!state.nodes)
-      state.nodes = g.findNodes(args);
-
-    if (!state.nodes.length) return "done";
-
-    const node = state.nodes.pop();
-    return Query.makeGremlin(node!, gremlin.state);
-  })
-
-  q.addPipetype('out', q.simpleTraversal('out'))
-  q.addPipetype('in',  q.simpleTraversal('in'))
-
-  q.addPipetype("property", function(_g, args, gremlin, _state) {
-    if (!gremlin) return "pull";
-    // args = [propertyName]
-    const propertyName = args[0]
-    if (typeof propertyName !== "string") return "pull";
-    gremlin.result = gremlin.node[propertyName];
-    return gremlin.result === null ? false : gremlin
-  })
-
-  q.addPipetype("unique", function(_g, _args, gremlin, state) {
-    if (!gremlin) return "pull";
-    const nodeId = typeof gremlin.node === "number" ? gremlin.node : gremlin.node._id; 
-    if (state[nodeId]) return 'pull';
-    state[nodeId] = true;
-    return gremlin;
-  })
-}
-
-function registerAlias(q: Query) {
-  q.addAlias("children", [["in"]])
-  q.addAlias("parents", [["out"]])
-
-  q.addAlias('grandparents', [['out', 'parent'], ['out', 'parent']])
-
-  // TODO: descomentar e testar
-//   Dagoba.addAlias('siblings',     [ ['as', 'me'], ['out', 'parent']
-//                                 , ['in', 'parent'], ['except', 'me']])
-// Dagoba.addAlias('cousins',      [ ['out', 'parent'], ['as', 'folks']
-//                                 , ['out', 'parent'], ['in', 'parent']
-//                                 , ['except', 'folks'], ['in', 'parent']
-//                                 , ['unique']])
-// testar mas isso aqui não vai funcionar
-// Dagoba.addAlias('cousins',      [ 'parents', ['as', 'folks']
-//                                 , 'parents', 'children'
-//                                 , ['except', 'folks'], 'children', 'unique'])
-}
-
 export function createQuery(g: Graph, startNodeId: number) {
-  const q = g.query(startNodeId);
-  registerDefaultPipes(q);
-  registerAlias(q);
+  const q = g.query([startNodeId]);
+  const qWithPipetype = q
+    .addPipetype("node", function(g, args = [], gremlin, state) {
+      if (!state.nodes)
+        state.nodes = g.findNodes(args);
 
-  return q;
+      if (!state.nodes.length) return "done";
+
+      const node = state.nodes.pop();
+      return Query.makeGremlin(node!, (typeof gremlin === "object") ? gremlin.state : {});
+    })
+    .addPipetype('out', q.simpleTraversal('out'))
+    .addPipetype('in',  q.simpleTraversal('in'))
+    .addPipetype("property", function(_g, args = [], gremlin, _state) {
+      if (!gremlin || typeof gremlin !== "object") return "pull";
+      // args = [propertyName]
+      const propertyName = args[0];
+      if (typeof propertyName !== "object") return "pull";
+      gremlin.result = gremlin.node[propertyName];
+      return gremlin.result === null ? false : gremlin
+    })
+    .addPipetype("unique", function(_g, _args, gremlin, state) {
+      if (!gremlin || typeof gremlin !== "object") return "pull";
+      const nodeId = Number(typeof gremlin.node !== "object" ? gremlin.node : gremlin.node._id); 
+      if (state[nodeId]) return 'pull';
+      state[nodeId] = true;
+      return gremlin;
+    })
+    .addAlias("children", [["in"]])
+    .addAlias("parents", [["out"]])
+    
+    // TODO: descomentar e testar
+  // .addAlias('grandparents', [['out', ['parent']], ['out', ['parent']]])
+  //   Dagoba.addAlias('siblings',     [ ['as', 'me'], ['out', 'parent']
+  //                                 , ['in', 'parent'], ['except', 'me']])
+  // Dagoba.addAlias('cousins',      [ ['out', 'parent'], ['as', 'folks']
+  //                                 , ['out', 'parent'], ['in', 'parent']
+  //                                 , ['except', 'folks'], ['in', 'parent']
+  //                                 , ['unique']])
+  // testar mas isso aqui não vai funcionar
+  // Dagoba.addAlias('cousins',      [ 'parents', ['as', 'folks']
+  //                                 , 'parents', 'children'
+  //                                 , ['except', 'folks'], 'children', 'unique'])
+
+  return qWithPipetype;
 }

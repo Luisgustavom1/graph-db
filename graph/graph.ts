@@ -1,5 +1,6 @@
 import { Query } from "./query.ts";
-import type { Edge, EdgeInput, Node, NodeInput, Error, NodeData } from "./contracts.ts";
+import type { PipeArgs } from "./query.ts";
+import type { Edge, EdgeInput, Node, NodeInput, Error, NodeData, NodeId } from "./contracts.ts";
 
 const DEFAULT_ERROR: Error = (msg: string) => {
   console.error(msg);
@@ -9,7 +10,7 @@ const DEFAULT_ERROR: Error = (msg: string) => {
 export class Graph {
   private _nodes: Node[];
   private _edges: Edge[];
-  private _vertexIndex: Record<number, Node>;
+  private _vertexIndex: Record<NodeId, Node>;
   private _autoIncId: number;
   readonly error: Error = DEFAULT_ERROR;
 
@@ -34,7 +35,7 @@ export class Graph {
     return g;
   }
 
-  filterEdges(edges: Edge[], filter: string[] | string) {
+  filterEdges(edges: Edge[], filter?: PipeArgs) {
     return edges.filter((edge: Edge) => {
       if (!filter) return true;
 
@@ -74,7 +75,7 @@ export class Graph {
   
 
   addNode(v: NodeInput) {
-    const node = typeof v === 'number' ? { _id: v } : v;
+    const node = typeof v !== 'object' ? { _id: v } : v;
 
     if (!node._id) node._id = this._autoIncId++;
     else if (this.findNodeById(node._id))
@@ -104,23 +105,23 @@ export class Graph {
 
   findNodeById(id?: NodeInput) {
     if (!id) return undefined;
-    if (typeof id === 'number') return this._vertexIndex[id];
+    if (typeof id !== 'object') return this._vertexIndex[id];
     return this._vertexIndex[id._id]
   }
 
-  query() {
+  query(args: PipeArgs) {
     const q = Query.query(this);
-    q.add('node', [].slice.call(arguments));
+    q.add('node', args);
     return q;
   }
 
   // g.v('Thor', 'Odin').run()
   // g.v({_id:'Thor'}).run()
   // g.v({species: 'Aesir'}).run()
-  findNodes(args: (number | NodeData)[]): Node[] {
+  findNodes(args: (NodeId | NodeData)[]): Node[] {
     if (typeof args[0] === "object") return this.searchNodes(args[0])
     else if (!args.length) return this.nodes.slice();
-    else return this.findNodeByIds(args as number[]);
+    else return this.findNodeByIds(args as NodeId[]);
   }
 
   searchNodes(query: NodeData) {
@@ -129,7 +130,7 @@ export class Graph {
     })
   }
 
-  findNodeByIds(ids: number[]) {
+  findNodeByIds(ids: NodeId[]) {
     if (ids.length === 1) {
       const maybeNode = this.findNodeById(ids[0]);
       return maybeNode ? [maybeNode] : [];

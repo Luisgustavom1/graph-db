@@ -1,23 +1,27 @@
 import type { Edge, Graph, Node, NodeData, NodeInput } from "./index.ts";
 import { Transformers } from "./tranformers.ts";
 
-export type PipeTypeName = "node" | "unique" | "property" | "in" | "out" | string;
-export type PipeArgs = string[];
-export type PipeType = (graph: Graph, args: PipeArgs, gremlin: Gremlin, state: State) =>  FullGremlin;
+export type PipeArgs = (string | number)[];
+export type PipeTypeName = string;
+export type PipeType = (graph: Graph, args: PipeArgs | undefined, gremlin: FullGremlin, state: State) => FullGremlin;
 export type State = { nodes?: Node[]; edges?: Edge[]; gremlin?: Gremlin, [k: number]: boolean };
 export type Gremlin = { node: NodeInput; state: State; result?: any; };
 export type FullGremlin = Gremlin | boolean | string;
-export type Program = [PipeTypeName, PipeArgs];
+export type Program<T extends PipeTypeName> = [T, PipeArgs] | [T];
 
 const FAUX_PIPETYPE: PipeType = function(_a, _b, maybe_gremlin) {
   return maybe_gremlin || "pull";
 }
 
-export class Query {
-  private program: Program[] = [];
+type PipetypeBase<T extends PipeTypeName = never> = Query<T> & {
+  [x in T]: (...args: PipeArgs) => PipetypeBase<T>
+};
+
+export class Query<PipeTypes extends PipeTypeName = never>{
+  private program: Program<PipeTypes>[] = [];
   private _graph: Graph;
   private state: State[] = [];
-  private _pipetypes: Record<string, PipeType> = {};
+  private _pipeTypes: Record<PipeTypes, PipeType> = {} as Record<PipeTypes, PipeType>;
   private _transformers: Transformers = new Transformers();
   
   private constructor(graph: Graph) {
@@ -43,9 +47,10 @@ export class Query {
     return true;
   }
 
-  add(type: PipeTypeName, args: PipeArgs) {
-    this.program.push([type, args]);
-    return this;
+  add<T extends PipeTypeName>(type: T, args: PipeArgs) {
+    const tmp = this as PipetypeBase<PipeTypes | T>;
+    tmp.program.push([type, args]);
+    return tmp;
   }
 
   makeGremlin(node: any, state: any) {
@@ -56,15 +61,14 @@ export class Query {
     const findMethod = dir === "out" ? "findOutEdges" : "findInEdges";
     const edgeList = dir === "out" ? "_in" : "_out";
     
-    return function(g: Graph, args: PipeArgs, gremlin: Gremlin, state: State) {
+    return (function(g, args = [], gremlin, state) {
       if (!state) return "pull";
-      
-      if (!gremlin && (!state.edges || !state.edges.length)) return "pull";
+      if (!gremlin || typeof gremlin !== "object") return "pull";
 
       if (!state.edges || !state.edges.length) {
         state.gremlin = gremlin;
         const edges: Edge[] = g[findMethod](gremlin.node);
-        state.edges = g.filterEdges(edges, args[0]);
+        state.edges = g.filterEdges(edges, args);
       }
 
       if (!state.edges.length) return "pull";
@@ -73,27 +77,31 @@ export class Query {
       if (!node) return "pull";
       // TODO: re-evaluate this cast
       return Query.gotoNode(gremlin as Gremlin, node);
-    }
+    } as PipeType)
   }
 
-  addPipetype(name: PipeTypeName, pipetype: PipeType) {
-    this._pipetypes[name] = pipetype;
-    this[name] = function() {
-      return this.add(name, [].slice.call(arguments));
-    };
+  addPipetype<T extends PipeTypeName>(name: T, pipetype: PipeType) {
+    const tmp = this as PipetypeBase<PipeTypes | T>;
+    tmp._pipeTypes[name] = pipetype;
+    tmp[name] = ((...args: PipeArgs) => {
+      tmp.add(name, args);
+      return tmp;
+    }) as PipetypeBase<PipeTypes | T>[T];
+
+    return tmp;
   }
 
-  getPipetype(name: PipeTypeName) {
-    const pipetype = this._pipetypes[name];
+  getPipetype(name: PipeTypes) {
+    const pipetype = this._pipeTypes[name];
 
     if (!pipetype) this._graph.error('unknown pipetype ' + name);
 
     return pipetype || FAUX_PIPETYPE;
   }
 
-  addAlias(alias: string, newProgram: Program[]) {
+  addAlias<T extends PipeTypeName>(alias: T, newProgram: Program<PipeTypes>[]) {
     const parsedProgram = newProgram.map(step => {
-      return [step[0], step.slice(1)] as Program;
+      return [step[0], step.slice(1)] as Program<PipeTypes>;
     })
     
     this._transformers.addTransformer((program) => {
@@ -102,10 +110,12 @@ export class Query {
         else acc.push(step);
         
         return acc;
-      }, [] as Program[])
+      }, [] as Program<PipeTypes | T>[])
     }, 100)
 
-    this.addPipetype(alias, function() {});
+    return this.addPipetype(alias, function() {
+      return "pull";
+    });
   }
 
   extend(args: PipeArgs, defaults: string[]) {
@@ -123,7 +133,7 @@ export class Query {
     const max = this.program.length - 1;
     let maybe_gremlin: FullGremlin = false;
     let pc = max;
-    const results = [];
+    const results: Gremlin[] = [];
     let done = -1;
     let step, state, pipetype: PipeType;
 
@@ -155,14 +165,12 @@ export class Query {
 
       pc++;
       if (pc > max) {
-        if (maybe_gremlin) results.push(maybe_gremlin);
+        if (maybe_gremlin && typeof maybe_gremlin === "object") results.push(maybe_gremlin);
         maybe_gremlin = false;
         pc--;
       }
     }
 
-    return results.map(gremlin => 
-      gremlin.result || gremlin.node
-    );
+    return results.map(gremlin => gremlin.result || gremlin.node);
   }
 }
