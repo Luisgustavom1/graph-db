@@ -43,27 +43,27 @@ export function createSampleGraph() {
 export function createQuery(g: Graph, startNodeId: number) {
   const q = g.query([startNodeId]);
   const qWithPipetype = q
-    .addPipetype("node", function(g, args = [], gremlin, state) {
+    .addPipetype("node", function(g, args = [], gremlin, state) {  
       if (!state.nodes)
         state.nodes = g.findNodes(args);
 
       if (!state.nodes.length) return "done";
 
       const node = state.nodes.pop();
-      return Query.makeGremlin(node!, (typeof gremlin === "object") ? gremlin.state : {});
+      return Query.makeGremlin(node!, gremlin?.state);
     })
     .addPipetype('out', q.simpleTraversal('out'))
     .addPipetype('in',  q.simpleTraversal('in'))
     .addPipetype("property", function(_g, args = [], gremlin, _state) {
-      if (!gremlin || typeof gremlin !== "object") return "pull";
+      if (!gremlin) return "pull";
       // args = [propertyName]
       const propertyName = args[0];
       if (typeof propertyName === "object") return "pull";
       gremlin.result = gremlin.node[propertyName];
-      return gremlin.result === null ? false : gremlin
+      return gremlin.result ? gremlin : undefined
     })
     .addPipetype("unique", function(_g, _args, gremlin, state) {
-      if (!gremlin || typeof gremlin !== "object") return "pull";
+      if (!gremlin) return "pull";
       const nodeId = Number(typeof gremlin.node !== "object" ? gremlin.node : gremlin.node._id); 
       if (state[nodeId]) return 'pull';
       state[nodeId] = true;

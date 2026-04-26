@@ -4,10 +4,9 @@ import { Transformers } from "./tranformers.ts";
 export type PipeArgs = PipeArgsItem[];
 export type PipeArgsItem = string | number
 export type PipeTypeName = string;
-export type PipeType = (graph: Graph, args: PipeArgs | undefined, gremlin: FullGremlin, state: State) => FullGremlin;
 export type State = { nodes?: Node[]; edges?: Edge[]; gremlin?: Gremlin, [k: number]: boolean };
+export type PipeType = (graph: Graph, args: PipeArgs | undefined, gremlin: Gremlin | undefined, state: State) => Gremlin | "pull" | "done" | undefined;
 export type Gremlin = { node: Node; state: State; result?: any; };
-export type FullGremlin = Gremlin | boolean | string;
 export type Program<T extends PipeTypeName> = [T, PipeArgs] | [T];
 
 const FAUX_PIPETYPE: PipeType = function(_a, _b, maybe_gremlin) {
@@ -33,12 +32,12 @@ export class Query<PipeTypes extends PipeTypeName = never>{
     return new Query(graph);
   }
 
-  static gotoNode(gremlin: Gremlin, node: NodeInput) {
-    return Query.makeGremlin(node, gremlin.state);
+  static gotoNode(gremlin: Gremlin | undefined, node: NodeInput) {
+    return Query.makeGremlin(node, gremlin?.state);
   }
 
   static makeGremlin(node: NodeInput, state: State = {}): Gremlin {
-    return { node, state };
+    return { node: typeof node === "object" ? node : { _id: node }, state };
   }
 
   static objectFilter(thing: NodeData, filter: NodeData) {
@@ -66,15 +65,13 @@ export class Query<PipeTypes extends PipeTypeName = never>{
       if (!state) return "pull";
       if (!gremlin && (!state.edges || !state.edges.length)) return "pull";
 
-      if (!state.edges || !state.edges.length) {
+      if (gremlin) {
         state.gremlin = gremlin;
         const edges: Edge[] = g[findMethod](gremlin.node);
         state.edges = g.filterEdges(edges, args[0]);
       }
-
-      if (!state.edges.length) return "pull";
       
-      const node = state.edges.pop()![edgeList];
+      const node = state.edges?.pop()![edgeList];
       if (!node) return "pull";
       return Query.gotoNode(gremlin, node);
     } as PipeType)
@@ -131,7 +128,7 @@ export class Query<PipeTypes extends PipeTypeName = never>{
     this.program = this._transformers.transform(this.program);
 
     const max = this.program.length - 1;
-    let maybe_gremlin: FullGremlin = false;
+    let maybe_gremlin: Gremlin | undefined;
     let pc = max;
     const results: Gremlin[] = [];
     let done = -1;
@@ -146,29 +143,32 @@ export class Query<PipeTypes extends PipeTypeName = never>{
       const [pipename, pipeargs] = step;
       
       pipetype = this.getPipetype(pipename);
-      maybe_gremlin = pipetype(this._graph, pipeargs, maybe_gremlin, state as unknown as State);
+      let new_gremlin = pipetype(this._graph, pipeargs, maybe_gremlin, state as unknown as State);
 
-      if (maybe_gremlin === "pull") {
-        maybe_gremlin = false;
+      if (new_gremlin === "pull") {
+        new_gremlin = undefined;
         if (pc - 1 > done) {
           pc--;
+          maybe_gremlin = new_gremlin
           continue;
         } else {
           done = pc;
         }
       }
 
-      if (maybe_gremlin === "done") {
-        maybe_gremlin = false;
+      if (new_gremlin === "done") {
+        new_gremlin = undefined;
         done = pc;
       }
 
       pc++;
       if (pc > max) {
-        if (maybe_gremlin && typeof maybe_gremlin === "object") results.push(maybe_gremlin);
-        maybe_gremlin = false;
+        if (new_gremlin) results.push(new_gremlin as Gremlin);
+        new_gremlin = undefined;
         pc--;
       }
+
+      maybe_gremlin = new_gremlin;
     }
 
     return results.map(gremlin => gremlin.result || gremlin.node);
