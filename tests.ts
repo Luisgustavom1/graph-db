@@ -13,11 +13,6 @@ const g = createSampleGraph();
 
 const testCases: TestCase[] = [
   {
-    name: "in().in().out().out().unique()",
-    actual: () => createQuery(g, 4).in().in().out().out().unique().run(),
-    expected: [7, 6, 5, 4],
-  },
-  {
     name: "in()",
     actual: () => createQuery(g, 4).in().run(),
     expected: [2],
@@ -26,6 +21,11 @@ const testCases: TestCase[] = [
     name: "in().in()",
     actual: () => createQuery(g, 4).in().in().run(),
     expected: [1],
+  },
+  {
+    name: "in().in().out().out().unique()",
+    actual: () => createQuery(g, 4).in().in().out().out().unique().run(),
+    expected: [7, 6, 5, 4],
   },
   {
     name: "in().in().out()",

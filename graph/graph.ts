@@ -1,5 +1,5 @@
 import { Query } from "./query.ts";
-import type { PipeArgs } from "./query.ts";
+import type { PipeArgs, PipeArgsItem } from "./query.ts";
 import type { Edge, EdgeInput, Node, NodeInput, Error, NodeData, NodeId } from "./contracts.ts";
 
 const DEFAULT_ERROR: Error = (msg: string) => {
@@ -35,14 +35,14 @@ export class Graph {
     return g;
   }
 
-  filterEdges(edges: Edge[], filter?: PipeArgs) {
+  filterEdges(edges: Edge[], filter?: PipeArgsItem) {
     return edges.filter((edge: Edge) => {
       if (!filter) return true;
 
-      if (typeof filter === "string") return edge._label === filter;
-
       if (Array.isArray(filter))
         return filter.indexOf(edge._label || "") !== -1;
+
+      if (typeof filter !== "object") return edge._label === filter;
 
       return Query.objectFilter(edge, filter);
     });

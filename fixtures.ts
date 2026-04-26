@@ -58,7 +58,7 @@ export function createQuery(g: Graph, startNodeId: number) {
       if (!gremlin || typeof gremlin !== "object") return "pull";
       // args = [propertyName]
       const propertyName = args[0];
-      if (typeof propertyName !== "object") return "pull";
+      if (typeof propertyName === "object") return "pull";
       gremlin.result = gremlin.node[propertyName];
       return gremlin.result === null ? false : gremlin
     })

@@ -1,11 +1,12 @@
 import type { Edge, Graph, Node, NodeData, NodeInput } from "./index.ts";
 import { Transformers } from "./tranformers.ts";
 
-export type PipeArgs = (string | number)[];
+export type PipeArgs = PipeArgsItem[];
+export type PipeArgsItem = string | number
 export type PipeTypeName = string;
 export type PipeType = (graph: Graph, args: PipeArgs | undefined, gremlin: FullGremlin, state: State) => FullGremlin;
 export type State = { nodes?: Node[]; edges?: Edge[]; gremlin?: Gremlin, [k: number]: boolean };
-export type Gremlin = { node: NodeInput; state: State; result?: any; };
+export type Gremlin = { node: Node; state: State; result?: any; };
 export type FullGremlin = Gremlin | boolean | string;
 export type Program<T extends PipeTypeName> = [T, PipeArgs] | [T];
 
@@ -63,20 +64,19 @@ export class Query<PipeTypes extends PipeTypeName = never>{
     
     return (function(g, args = [], gremlin, state) {
       if (!state) return "pull";
-      if (!gremlin || typeof gremlin !== "object") return "pull";
+      if (!gremlin && (!state.edges || !state.edges.length)) return "pull";
 
       if (!state.edges || !state.edges.length) {
         state.gremlin = gremlin;
         const edges: Edge[] = g[findMethod](gremlin.node);
-        state.edges = g.filterEdges(edges, args);
+        state.edges = g.filterEdges(edges, args[0]);
       }
 
       if (!state.edges.length) return "pull";
       
       const node = state.edges.pop()![edgeList];
       if (!node) return "pull";
-      // TODO: re-evaluate this cast
-      return Query.gotoNode(gremlin as Gremlin, node);
+      return Query.gotoNode(gremlin, node);
     } as PipeType)
   }
 

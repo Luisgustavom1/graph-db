@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Debug Node Tests",
+      "runtimeExecutable": "/Users/luisao/.nvm/versions/node/v22.13.1/bin/node", 
+      "program": "${workspaceFolder}/tests.ts",
+      "runtimeArgs": [
+        "--experimental-strip-types",
+        "--test"
+      ],
+      "console": "integratedTerminal"
+    }
+  ]
+}
